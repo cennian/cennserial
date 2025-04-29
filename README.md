@@ -78,6 +78,8 @@ requirements.txt        # Python dependencies
 
 MIT License
 
+See [LICENSE](LICENSE) for details.
+
 ---
 
 **Made with Flask, Socket.IO, Bootstrap, and Chart.js**

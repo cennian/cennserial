@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.env
+.env
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+*.egg
+
+# VSCode
+.vscode/
+
+# Pytest cache
+.pytest_cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Compiled C extensions
+*.so
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore test results
+htmlcov/
+coverage.*
+.cache/
+.noseids
+
+# Ignore local settings
+*.local
+
+# Ignore backup files
+*~
+*.bak
+
+# Ignore node_modules if any frontend dev
+node_modules/

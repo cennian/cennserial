@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CennSerial Monitor</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">CennSerial Monitor</a>
+            <div class="ms-auto me-3">
+                 <span id="connectionStatus" class="badge bg-secondary">Disconnected</span>
+             </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5 pt-4">
+        <!-- Error Display -->
+        <div id="errorAlertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 1050;">
+            <!-- Error alerts will be appended here -->
+        </div>
+
+        <!-- Connection Controls -->
+        <div class="row mb-3 align-items-end gy-2">
+            <div class="col-md-4">
+                <label for="serialPorts" class="form-label mb-1">Serial Port</label>
+                <select id="serialPorts" class="form-select form-select-sm"></select>
+            </div>
+            <div class="col-md-2">
+                <label for="baudRate" class="form-label mb-1">Baud Rate</label>
+                <select id="baudRate" class="form-select form-select-sm">
+                    <option>9600</option>
+                    <option>19200</option>
+                    <option>38400</option>
+                    <option>57600</option>
+                    <option selected>115200</option>
+                    <option>230400</option>
+                    <option>460800</option>
+                    <option>921600</option>
+                </select>
+            </div>
+            <div class="col-md-auto">
+                <button id="refreshPortsBtn" class="btn btn-sm btn-outline-secondary" title="Refresh Port List">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+                    </svg>
+                </button>
+                <button id="connectBtn" class="btn btn-sm btn-success">Connect</button>
+                <button id="disconnectBtn" class="btn btn-sm btn-danger" disabled>Disconnect</button>
+            </div>
+        </div>
+
+        <!-- Tabs for Output/Plot -->
+        <ul class="nav nav-tabs mb-2" id="monitorTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="output-tab" data-bs-toggle="tab" data-bs-target="#output-panel" type="button" role="tab" aria-controls="output-panel" aria-selected="true">Serial Output</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="plot-tab" data-bs-toggle="tab" data-bs-target="#plot-panel" type="button" role="tab" aria-controls="plot-panel" aria-selected="false">Live Plot</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="monitorTabContent">
+            <!-- Serial Output Panel -->
+            <div class="tab-pane fade show active" id="output-panel" role="tabpanel" aria-labelledby="output-tab">
+                <div id="serialOutput" class="form-control mb-2" style="height: 350px; overflow-y: scroll; font-family: monospace; white-space: pre-wrap; background-color: #f8f9fa; font-size: 0.9em;"></div>
+                <div class="d-flex justify-content-between align-items-center">
+                     <button id="clearOutputBtn" class="btn btn-sm btn-outline-secondary">Clear Output</button>
+                     <div class="form-check form-switch form-check-inline">
+                        <input class="form-check-input" type="checkbox" role="switch" id="autoscrollCheck" checked>
+                        <label class="form-check-label" for="autoscrollCheck">Autoscroll</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plotting Panel -->
+            <div class="tab-pane fade" id="plot-panel" role="tabpanel" aria-labelledby="plot-tab">
+            <div style="position: relative; height:350px;">
+                <canvas id="livePlot"></canvas>
+            </div>
+            <div class="mt-2">
+                <button id="clearPlotBtn" class="btn btn-sm btn-outline-secondary">Clear Plot</button>
+                <span class="ms-3 text-muted small">
+                    Showing last <span id="plotPointCount">0</span>/<span id="plotMaxPoints">100</span> points
+                </span>
+                <!-- Example usage for live plot -->
+                <div class="alert alert-info mt-2 py-1 px-2 small" style="display:inline-block;">
+                    <b>Tip:</b> To see a live plot demo, open browser console and run:<br>
+                    <code>setInterval(() => socket.emit('plot_data', { value: Math.random()*100 }), 500);</code>
+                </div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Send Data -->
+        <div class="row mt-3 mb-5">
+            <div class="col">
+                <label for="serialInput" class="form-label mb-1">Send Data</label>
+                <div class="input-group input-group-sm">
+                    <input type="text" id="serialInput" class="form-control" placeholder="Enter data to send...">
+                    <select class="form-select flex-grow-0" id="newlineSelect" style="width: auto;">
+                        <option value="none">No newline</option>
+                        <option value="lf">LF (\n)</option>
+                        <option value="cr">CR (\r)</option>
+                        <option value="crlf" selected>CRLF (\r\n)</option>
+                    </select>
+                    <button id="sendBtn" class="btn btn-primary" disabled>Send</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <!-- <footer class="footer mt-auto py-3 bg-light fixed-bottom">
+        <div class="container text-center">
+            <span class="text-muted">Web Serial Monitor</span>
+        </div>
+    </footer> -->
+
+    <!-- Bootstrap Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

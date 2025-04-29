@@ -1,0 +1,39 @@
+/* Add custom styles here if needed */
+body {
+    padding-top: 56px; /* Adjust for fixed navbar height */
+    padding-bottom: 20px; /* Add some padding at the bottom */
+}
+
+/* Ensure plot canvas container respects height */
+#plot-panel > div {
+    height: 350px;
+    position: relative;
+}
+
+#livePlot {
+    max-height: 100%; /* Fill container height */
+}
+
+/* Style for serial output */
+#serialOutput {
+    background-color: #f1f3f5; /* Lighter grey background */
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    font-size: 0.85em; /* Slightly smaller font */
+    line-height: 1.4;
+}
+
+/* Style for error messages */
+#serialOutput span[style*="color: red"] {
+    font-weight: bold;
+}
+
+/* Style for info messages */
+#serialOutput span[style*="color: green"] {
+    font-style: italic;
+}
+
+/* Ensure toast container is on top */
+#errorAlertContainer {
+    z-index: 1100; /* Higher than navbar if necessary */
+}
